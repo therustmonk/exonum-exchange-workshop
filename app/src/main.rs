@@ -9,8 +9,9 @@ extern crate serde;
 extern crate serde_derive;
 extern crate serde_json;
 
+use std::collections::HashMap;
 use stdweb::web::document;
-use stdweb::web::{INode, IParentNode};
+use stdweb::web::{XmlHttpRequest, INode, IParentNode};
 use rand::Rng;
 use rand::OsRng;
 use sha2::Sha512;
@@ -20,14 +21,14 @@ use serde::Serialize;
 
 trait Fill {
     fn fill(&self) -> Vec<u8>;
+    fn to_value(&self) -> serde_json::Value;
 }
 
-#[derive(Serialize)]
 struct Message<T> {
     network_id: u8,
     protocol_version: u8,
     service_id: u16,
-    message_type: u16,
+    message_id: u16,
     body: T,
 }
 
@@ -40,20 +41,30 @@ impl<T: Fill> Fill for Message<T> {
         let mut buffer = Vec::new();
         buffer.write_u8(self.network_id);
         buffer.write_u8(self.protocol_version);
-        buffer.write_u16::<LittleEndian>(self.message_type);
+        buffer.write_u16::<LittleEndian>(self.message_id);
         buffer.write_u16::<LittleEndian>(self.service_id);
         let len = SERVICE_DATA_LEN + payload.len() + SIGNATURE_LEN;
         buffer.write_u32::<LittleEndian>(len as u32);
         buffer.extend_from_slice(&payload);
         buffer
     }
+
+    fn to_value(&self) -> serde_json::Value {
+        let mut map: HashMap<String, serde_json::Value> = HashMap::new();
+        map.insert("network_id".into(), self.network_id.into());
+        map.insert("protocol_version".into(), self.protocol_version.into());
+        map.insert("message_id".into(), self.message_id.into());
+        map.insert("service_id".into(), self.service_id.into());
+        map.insert("body".into(), self.body.to_value());
+        serde_json::to_value(&map).unwrap()
+    }
 }
 
-impl<T: Fill + Serialize> Message<T> {
+impl<T: Fill> Message<T> {
     fn to_exonum(&self, keypair: &Keypair) -> String {
         let data = self.fill(); // DRY
         let signature: Signature = keypair.sign::<Sha512>(&data);
-        let mut value = serde_json::to_value(&self).unwrap();
+        let mut value = self.to_value();
         {
             let size = self.body.fill().len();
             let object = value.as_object_mut().unwrap();
@@ -66,14 +77,20 @@ impl<T: Fill + Serialize> Message<T> {
 }
 
 struct TxCreate {
-    owner: PublicKey,
+    owner: [u8; 32],
 }
 
 impl Fill for TxCreate {
     fn fill(&self) -> Vec<u8> {
         let mut buffer = Vec::new();
-        buffer.extend_from_slice(self.owner.as_bytes());
+        buffer.extend_from_slice(&self.owner);
         buffer
+    }
+
+    fn to_value(&self) -> serde_json::Value {
+        let mut map: HashMap<String, serde_json::Value> = HashMap::new();
+        map.insert("owner".into(), hex::encode(&self.owner).into());
+        serde_json::to_value(&map).unwrap()
     }
 }
 
@@ -88,5 +105,21 @@ fn main() {
     let message = format!("Public Key: {}", pkey);
     div.set_text_content(&message);
     body.append_child(&div);
+
+    let request = XmlHttpRequest::new();
+    let tx_create = TxCreate {
+        owner: keypair.public.to_bytes(),
+    };
+    let message = Message {
+        network_id: 0,
+        protocol_version: 0,
+        service_id: 1,
+        message_id: 1,
+        body: tx_create,
+    };
+    request.open("POST", "http://localhost:8080/api/services/cryptoexchange/v1/account");
+    let data = message.to_exonum(&keypair);
+    request.send_with_string(&data);
+
     stdweb::event_loop();
 }

@@ -7,6 +7,7 @@ extern crate cryptoexchange;
 use exonum::blockchain::{GenesisConfig, ValidatorKeys};
 use exonum::node::{Node, NodeApiConfig, NodeConfig};
 use exonum::storage::MemoryDB;
+use exonum::node::AllowOrigin;
 use cryptoexchange::service;
 
 fn node_config() -> NodeConfig {
@@ -19,9 +20,10 @@ fn node_config() -> NodeConfig {
     };
     let genesis = GenesisConfig::new(vec![validator_keys].into_iter());
 
-    let api_address = "0.0.0.0:8000".parse().unwrap();
+    let api_address = "0.0.0.0:8080".parse().unwrap();
     let api_cfg = NodeApiConfig {
         public_api_address: Some(api_address),
+        allow_origin: Some(AllowOrigin::Any),
         ..Default::default()
     };
 

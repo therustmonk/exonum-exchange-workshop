@@ -10,6 +10,7 @@ use iron::prelude::*;
 use iron::Handler;
 use router::Router;
 use serde::Deserialize;
+use bodyparser;
 use serde_json;
 use protocol::*;
 
@@ -77,8 +78,32 @@ struct ExchangeServiceApi {
     blockchain: Blockchain,
 }
 
+impl ExchangeServiceApi {
+    fn post_transaction<T>(&self, req: &mut Request) -> IronResult<Response>
+    where
+        T: Transaction + Clone + for<'de> Deserialize<'de>,
+    {
+        match req.get::<bodyparser::Struct<T>>() {
+            Ok(Some(transaction)) => {
+                let transaction: Box<Transaction> = Box::new(transaction);
+                let tx_hash = transaction.hash();
+                self.channel.send(transaction).map_err(ApiError::from)?;
+                self.ok_response(&json!({
+                    "tx_hash": tx_hash
+                }))
+            }
+            Ok(None) => Err(ApiError::IncorrectRequest("Empty request body".into()))?,
+            Err(e) => Err(ApiError::IncorrectRequest(Box::new(e)))?,
+        }
+}
+}
+
 impl Api for ExchangeServiceApi {
     fn wire(&self, router: &mut Router) {
+        let self_ = self.clone();
+        let post_create_account =
+            move |req: &mut Request| self_.post_transaction::<TxCreate>(req);
+        router.post("/v1/account", post_create_account, "post_create_account");
     }
 }
 
