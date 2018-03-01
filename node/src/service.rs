@@ -5,6 +5,7 @@ use exonum::messages::{RawTransaction, Message};
 use exonum::storage::{Fork, MapIndex, Snapshot};
 use exonum::crypto::{Hash, PublicKey};
 use exonum::encoding;
+use exonum::encoding::serialize::FromHex;
 use exonum::api::{Api, ApiError};
 use iron::prelude::*;
 use iron::Handler;
@@ -72,6 +73,19 @@ impl Transaction for TxCreate {
     }
 }
 
+impl Transaction for TxOrder {
+    fn verify(&self) -> bool {
+        self.verify_signature(self.owner())
+    }
+
+    fn execute(&self, view: &mut Fork) {
+        let mut schema = ExchangeSchema::new(view);
+        if schema.account(self.owner()).is_some() {
+            // TODO Create an order
+        }
+    }
+}
+
 // // // // // // // // // // REST API // // // // // // // // // //
 
 #[derive(Clone)]
@@ -97,7 +111,25 @@ impl ExchangeServiceApi {
             Ok(None) => Err(ApiError::IncorrectRequest("Empty request body".into()))?,
             Err(e) => Err(ApiError::IncorrectRequest(Box::new(e)))?,
         }
-}
+    }
+
+    fn get_account(&self, req: &mut Request) -> IronResult<Response> {
+        let path = req.url.path();
+        let wallet_key = path.last().unwrap();
+        let public_key = PublicKey::from_hex(wallet_key).map_err(ApiError::FromHex)?;
+
+        let account = {
+            let snapshot = self.blockchain.snapshot();
+            let schema = ExchangeSchema::new(snapshot);
+            schema.account(&public_key)
+        };
+
+        if let Some(account) = account {
+            self.ok_response(&serde_json::to_value(account).unwrap())
+        } else {
+            self.not_found_response(&serde_json::to_value("account not found").unwrap())
+        }
+    }
 }
 
 impl Api for ExchangeServiceApi {
@@ -105,7 +137,10 @@ impl Api for ExchangeServiceApi {
         let self_ = self.clone();
         let post_create_account =
             move |req: &mut Request| self_.post_transaction::<TxCreate>(req);
+        let self_ = self.clone();
+        let get_account = move |req: &mut Request| self_.get_account(req);
         router.post("/v1/account", post_create_account, "post_create_account");
+        router.get("/v1/account/:pub_key", get_account, "get_account");
     }
 }
 
