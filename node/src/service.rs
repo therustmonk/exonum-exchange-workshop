@@ -33,6 +33,7 @@ encoding_struct! {
 encoding_struct! {
     struct Order {
         owner: &PublicKey,
+        price: u32,
         amount: i32,
     }
 }
@@ -98,7 +99,8 @@ impl Transaction for TxOrder {
         if schema.account(self.owner()).is_some() {
             let mut orders = schema.orders_mut();
             if !orders.contains(&self.id()) {
-                let order = Order::new(self.owner(), self.amount());
+                let order = Order::new(self.owner(), self.price(), self.amount());
+                println!("Place the order <{}>: {:?}", self.id(), order);
                 orders.put(&self.id(), order);
             }
         }

@@ -20,6 +20,7 @@ message! {
         const ID = TX_ORDER;
 
         owner: &PublicKey,
+        price: u32,
         amount: i32,
         id: u32,
     }

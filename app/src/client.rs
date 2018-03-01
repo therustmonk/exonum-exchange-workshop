@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::rc::Rc;
 use serde_json::{self, Value};
 use hex;
 use sha2::Sha512;
@@ -47,7 +48,7 @@ impl<T: Fill> Fill for Message<T> {
 }
 
 impl<T: Fill> Message<T> {
-    pub fn to_exonum(&self, keypair: &Keypair) -> String {
+    pub fn to_exonum(&self, keypair: Rc<Keypair>) -> String {
         let data = self.fill(); // DRY
         let signature: Signature = keypair.sign::<Sha512>(&data);
         let mut value = self.to_value();
@@ -80,3 +81,29 @@ impl Fill for TxCreate {
     }
 }
 
+pub struct TxOrder {
+    pub owner: [u8; 32],
+    pub price: u32,
+    pub amount: i32,
+    pub id: u32,
+}
+
+impl Fill for TxOrder {
+    fn fill(&self) -> Vec<u8> {
+        let mut buffer = Vec::new();
+        buffer.extend_from_slice(&self.owner);
+        buffer.write_u32::<LittleEndian>(self.price);
+        buffer.write_i32::<LittleEndian>(self.amount);
+        buffer.write_u32::<LittleEndian>(self.id);
+        buffer
+    }
+
+    fn to_value(&self) -> Value {
+        let mut map: HashMap<String, Value> = HashMap::new();
+        map.insert("owner".into(), hex::encode(&self.owner).into());
+        map.insert("price".into(), self.price.into());
+        map.insert("amount".into(), self.amount.into());
+        map.insert("id".into(), self.id.into());
+        serde_json::to_value(&map).unwrap()
+    }
+}
