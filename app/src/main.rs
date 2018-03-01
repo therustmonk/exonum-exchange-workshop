@@ -28,9 +28,8 @@ fn main() {
     let mut cspring: OsRng = OsRng::new().unwrap();
     let keypair: Keypair = Keypair::generate::<Sha512>(&mut cspring);
     println!("Keypair: {:?}", keypair);
-    let div = document().query_selector("#key").unwrap().unwrap();
     let pkey = hex::encode(keypair.public.to_bytes());
-    div.set_text_content(&pkey);
+    update_text("#key", &pkey);
 
     let request = XmlHttpRequest::new();
     let tx_create = TxCreate {
@@ -44,32 +43,36 @@ fn main() {
         body: tx_create,
     };
     let data = message.to_exonum(&keypair);
-    fetch("POST", "http://localhost:8080/api/services/cryptoexchange/v1/account", &data, |success, data| {
+    fetch("POST", "http://localhost:8080/api/services/cryptoexchange/v1/account", Some(&data), |success, data| {
         println!("Data: {}", data);
     });
-    /*
-    request.open("POST", "http://localhost:8080/api/services/cryptoexchange/v1/account");
-    request.send_with_string(&data);
-    let cloned = request.clone();
-    request.add_event_listener(move |_: ResourceLoadEvent| {
-        cloned.response_text().unwrap().unwrap();
-    });
-    */
-    //stdweb::web::set_timeout(move || update_account(keypair), 10_000);
+
+    stdweb::web::set_timeout(move || update_account(keypair), 3_000);
 
     stdweb::event_loop();
+}
+
+#[derive(Deserialize)]
+struct Account {
+    owner: String,
+    token_balance: String,
+    usd_balance: String,
 }
 
 fn update_account(keypair: Keypair) {
     let request = XmlHttpRequest::new();
     let pub_key = hex::encode(keypair.public.as_bytes());
     let url = format!("http://localhost:8080/api/services/cryptoexchange/v1/account/{}", pub_key);
-    request.open("GET", &url);
-    request.send();
-    stdweb::web::set_timeout(move || update_account(keypair), 10_000);
+    fetch("GET", &url, None, |success, data| {
+        if let Ok(acc) = serde_json::from_str::<Account>(&data) {
+            update_text("#usd", &acc.usd_balance);
+            update_text("#tok", &acc.token_balance);
+        }
+    });
+    stdweb::web::set_timeout(move || update_account(keypair), 3_000);
 }
 
-fn fetch<F>(method: &str, url: &str, body: &str, callback: F)
+fn fetch<F>(method: &str, url: &str, body: Option<&str>, callback: F)
 where
     F: Fn(bool, String) + 'static,
 {
@@ -96,4 +99,9 @@ where
             callback.drop();
         });
     };
+}
+
+fn update_text(query: &str, value: &str) {
+    let elem = document().query_selector(query).unwrap().unwrap();
+    elem.set_text_content(value);
 }
