@@ -4,6 +4,10 @@ extern crate ed25519_dalek;
 extern crate stdweb;
 extern crate hex;
 extern crate byteorder;
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
+extern crate serde_json;
 
 use stdweb::web::document;
 use stdweb::web::{INode, IParentNode};
@@ -12,17 +16,19 @@ use rand::OsRng;
 use sha2::Sha512;
 use ed25519_dalek::{Keypair, Signature, PublicKey};
 use byteorder::{LittleEndian, WriteBytesExt};
+use serde::Serialize;
 
 trait Fill {
     fn fill(&self) -> Vec<u8>;
 }
 
+#[derive(Serialize)]
 struct Message<T> {
     network_id: u8,
     protocol_version: u8,
     service_id: u16,
     message_type: u16,
-    data: T,
+    body: T,
 }
 
 const SERVICE_DATA_LEN: usize = 10; // bytes
@@ -30,7 +36,7 @@ const SIGNATURE_LEN: usize = 64; // bytes
 
 impl<T: Fill> Fill for Message<T> {
     fn fill(&self) -> Vec<u8> {
-        let payload = self.data.fill();
+        let payload = self.body.fill();
         let mut buffer = Vec::new();
         buffer.write_u8(self.network_id);
         buffer.write_u8(self.protocol_version);
@@ -43,10 +49,19 @@ impl<T: Fill> Fill for Message<T> {
     }
 }
 
-impl<T: Fill> Message<T> {
-    fn to_exonum(&self, keypair: &Keypair) {
-        let data = self.fill();
+impl<T: Fill + Serialize> Message<T> {
+    fn to_exonum(&self, keypair: &Keypair) -> String {
+        let data = self.fill(); // DRY
         let signature: Signature = keypair.sign::<Sha512>(&data);
+        let mut value = serde_json::to_value(&self).unwrap();
+        {
+            let size = self.body.fill().len();
+            let object = value.as_object_mut().unwrap();
+            object.insert("size".into(), size.into());
+            let signature = hex::encode(signature.to_bytes().as_ref());
+            object.insert("signature".into(), signature.into());
+        }
+        serde_json::to_string_pretty(&value).unwrap()
     }
 }
 
