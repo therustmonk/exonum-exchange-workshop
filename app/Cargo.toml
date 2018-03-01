@@ -1,0 +1,10 @@
+[package]
+name = "app"
+version = "0.1.0"
+authors = ["Denis Kolodin <denis.kolodin@xdev.re>"]
+
+[dependencies]
+ed25519-dalek = "0.6.1"
+rand = "0.4.2"
+sha2 = "0.7.0"
+stdweb = "0.4.0"
