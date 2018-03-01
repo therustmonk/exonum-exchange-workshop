@@ -25,6 +25,9 @@ struct Message<T> {
     data: T,
 }
 
+const SERVICE_DATA_LEN: usize = 10; // bytes
+const SIGNATURE_LEN: usize = 64; // bytes
+
 impl<T: Fill> Fill for Message<T> {
     fn fill(&self) -> Vec<u8> {
         let payload = self.data.fill();
@@ -33,9 +36,17 @@ impl<T: Fill> Fill for Message<T> {
         buffer.write_u8(self.protocol_version);
         buffer.write_u16::<LittleEndian>(self.message_type);
         buffer.write_u16::<LittleEndian>(self.service_id);
-        buffer.write_u32::<LittleEndian>(payload.len() as u32);
+        let len = SERVICE_DATA_LEN + payload.len() + SIGNATURE_LEN;
+        buffer.write_u32::<LittleEndian>(len as u32);
         buffer.extend_from_slice(&payload);
         buffer
+    }
+}
+
+impl<T: Fill> Message<T> {
+    fn to_exonum(&self, keypair: &Keypair) {
+        let data = self.fill();
+        let signature: Signature = keypair.sign::<Sha512>(&data);
     }
 }
 
