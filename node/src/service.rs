@@ -17,8 +17,8 @@ use protocol::*;
 
 // // // // // // // // // // CONSTANTS // // // // // // // // // //
 
-const USD_BALANCE: u64 = 1000;
-const TOKEN_BALANCE: u64 = 1000000;
+const USD_BALANCE: u64 = 1_000_000;
+const TOKEN_BALANCE: u64 = 1_000;
 
 // // // // // // // // // // PERSISTENT DATA // // // // // // // // // //
 
@@ -27,6 +27,20 @@ encoding_struct! {
         owner: &PublicKey,
         usd_balance: u64,
         token_balance: u64,
+    }
+}
+
+impl Account {
+    fn buy_tokens(&self, price: u32, amount: i32) -> Self {
+        let usd_balance = self.usd_balance() - (price as i32 * amount) as u64;
+        let token_balance = self.token_balance() + amount as u64;
+        Self::new(self.owner(), usd_balance, token_balance)
+    }
+
+    fn sell_tokens(&self, price: u32, amount: i32) -> Self {
+        let usd_balance = self.usd_balance() + (price as i32 * amount) as u64;
+        let token_balance = self.token_balance() - amount as u64;
+        Self::new(self.owner(), usd_balance, token_balance)
     }
 }
 
@@ -96,12 +110,21 @@ impl Transaction for TxOrder {
 
     fn execute(&self, view: &mut Fork) {
         let mut schema = ExchangeSchema::new(view);
-        if schema.account(self.owner()).is_some() {
-            let mut orders = schema.orders_mut();
-            if !orders.contains(&self.id()) {
+        let account = schema.account(self.owner());
+        if let Some(account) = account {
+            let not_exists = !schema.orders_mut().contains(&self.id());
+            if not_exists {
                 let order = Order::new(self.owner(), self.price(), self.amount());
                 println!("Place the order <{}>: {:?}", self.id(), order);
-                orders.put(&self.id(), order);
+                let account = {
+                    if order.amount() > 0 {
+                        account.buy_tokens(order.price(), order.amount())
+                    } else {
+                        account.sell_tokens(order.price(), -order.amount())
+                    }
+                };
+                schema.accounts_mut().put(self.owner(), account);
+                schema.orders_mut().put(&self.id(), order);
             }
         }
     }

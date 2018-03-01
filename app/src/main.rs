@@ -26,6 +26,8 @@ use ed25519_dalek::{Keypair, Signature, PublicKey};
 use client::{Message, TxCreate, TxOrder};
 use serde_json::Value;
 
+const UPDATE_MS: u32 = 1_000;
+
 fn main() {
     stdweb::initialize();
     let mut cspring: OsRng = OsRng::new().unwrap();
@@ -63,7 +65,7 @@ fn main() {
         println!("Data: {}", data);
     });
 
-    stdweb::web::set_timeout(move || update_account(keypair), 3_000);
+    stdweb::web::set_timeout(move || update_account(keypair), UPDATE_MS);
 
     stdweb::event_loop();
 }
@@ -85,7 +87,7 @@ fn update_account(keypair: Rc<Keypair>) {
             update_text("#tok", &acc.token_balance);
         }
     });
-    stdweb::web::set_timeout(move || update_account(keypair), 3_000);
+    stdweb::web::set_timeout(move || update_account(keypair), UPDATE_MS);
 }
 
 fn fetch<F>(method: &str, url: &str, body: Option<&str>, callback: F)
@@ -125,6 +127,7 @@ fn update_text(query: &str, value: &str) {
 fn append_order(tx_order: &TxOrder) {
     let orders = document().query_selector("#orders").unwrap().unwrap();
     let order = document().create_element("div").unwrap();
+    orders.append_child(&order);
 
     let uid = document().create_element("p").unwrap();
     let value = format!("Id: {}", tx_order.id);
@@ -138,10 +141,8 @@ fn append_order(tx_order: &TxOrder) {
 
     let amount = document().create_element("p").unwrap();
     let value = format!("Size: {}", tx_order.amount);
-    price.set_text_content(&value);
+    amount.set_text_content(&value);
     order.append_child(&amount);
-
-    orders.append_child(&order);
 }
 
 fn place_order(sell: bool, keypair: Rc<Keypair>) {
