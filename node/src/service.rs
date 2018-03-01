@@ -30,6 +30,13 @@ encoding_struct! {
     }
 }
 
+encoding_struct! {
+    struct Order {
+        owner: &PublicKey,
+        amount: i32,
+    }
+}
+
 // // // // // // // // // // DATA LAYOUT // // // // // // // // // //
 
 pub struct ExchangeSchema<T> {
@@ -48,11 +55,19 @@ impl<T: AsRef<Snapshot>> ExchangeSchema<T> {
     pub fn account(&self, owner: &PublicKey) -> Option<Account> {
         self.accounts().get(owner)
     }
+
+    pub fn orders(&self) -> MapIndex<&Snapshot, u32, Order> {
+        MapIndex::new("cryptoexchange.orders", self.view.as_ref())
+    }
 }
 
 impl<'a> ExchangeSchema<&'a mut Fork> {
     pub fn accounts_mut(&mut self) -> MapIndex<&mut Fork, PublicKey, Account> {
         MapIndex::new("cryptoexchange.accounts", &mut self.view)
+    }
+
+    pub fn orders_mut(&mut self) -> MapIndex<&mut Fork, u32, Order> {
+        MapIndex::new("cryptoexchange.orders", &mut self.view)
     }
 }
 
@@ -81,7 +96,11 @@ impl Transaction for TxOrder {
     fn execute(&self, view: &mut Fork) {
         let mut schema = ExchangeSchema::new(view);
         if schema.account(self.owner()).is_some() {
-            // TODO Create an order
+            let mut orders = schema.orders_mut();
+            if !orders.contains(&self.id()) {
+                let order = Order::new(self.owner(), self.amount());
+                orders.put(&self.id(), order);
+            }
         }
     }
 }
@@ -138,8 +157,12 @@ impl Api for ExchangeServiceApi {
         let post_create_account =
             move |req: &mut Request| self_.post_transaction::<TxCreate>(req);
         let self_ = self.clone();
+        let post_create_order =
+            move |req: &mut Request| self_.post_transaction::<TxOrder>(req);
+        let self_ = self.clone();
         let get_account = move |req: &mut Request| self_.get_account(req);
         router.post("/v1/account", post_create_account, "post_create_account");
+        router.post("/v1/order", post_create_order, "post_create_order");
         router.get("/v1/account/:pub_key", get_account, "get_account");
     }
 }
