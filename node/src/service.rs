@@ -16,14 +16,16 @@ use protocol::*;
 
 // // // // // // // // // // CONSTANTS // // // // // // // // // //
 
-const INIT_BALANCE: u64 = 1000000;
+const USD_BALANCE: u64 = 1000;
+const TOKEN_BALANCE: u64 = 1000000;
 
 // // // // // // // // // // PERSISTENT DATA // // // // // // // // // //
 
 encoding_struct! {
     struct Account {
         owner: &PublicKey,
-        balance: u64,
+        usd_balance: u64,
+        token_balance: u64,
     }
 }
 
@@ -63,7 +65,7 @@ impl Transaction for TxCreate {
     fn execute(&self, view: &mut Fork) {
         let mut schema = ExchangeSchema::new(view);
         if schema.account(self.owner()).is_none() {
-            let account = Account::new(self.owner(), INIT_BALANCE);
+            let account = Account::new(self.owner(), USD_BALANCE, TOKEN_BALANCE);
             println!("Create the account: {:?}", account);
             schema.accounts_mut().put(self.owner(), account);
         }
