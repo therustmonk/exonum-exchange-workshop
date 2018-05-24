@@ -1,4 +1,5 @@
 #![recursion_limit="256"]
+extern crate failure;
 #[macro_use]
 extern crate log;
 extern crate rand;
@@ -19,16 +20,21 @@ pub mod context;
 pub mod exonum;
 
 use yew::prelude::*;
-use context::Context;
-use exonum::{ExonumService, KeyPair};
+use yew::services::interval::IntervalTask;
+use yew::services::fetch::FetchTask;
+use context::{Context, Account, OrderBook};
 
 pub struct Model {
+    interval_task: IntervalTask,
+    task: Option<FetchTask>,
 }
 
 pub enum Msg {
+    Account(Result<Account, String>),
     Increment,
     Decrement,
     Bulk(Vec<Msg>),
+    NeedUpdate(()),
 }
 
 impl Component<Context> for Model {
@@ -36,10 +42,28 @@ impl Component<Context> for Model {
     type Properties = ();
 
     fn create(_: Self::Properties, env: &mut Env<Context, Self>) -> Self {
-        Model { }
+        env.exonum().create_account();
+        let callback = env.send_back(Msg::NeedUpdate);
+        let interval_task = env.schedule_updates(callback);
+        Model {
+            interval_task,
+            task: None,
+        }
     }
 
     fn update(&mut self, msg: Self::Message, env: &mut Env<Context, Self>) -> ShouldRender {
+        match msg {
+            Msg::Account(account) => {
+                info!("Account: {:?}", account);
+            },
+            Msg::NeedUpdate(_) => {
+                let callback = env.send_back(Msg::Account);
+                let task = env.fetch_account(callback);
+                self.task = Some(task);
+            },
+            _ => {
+            },
+        }
         true
     }
 }

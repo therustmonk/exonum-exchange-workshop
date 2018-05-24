@@ -1,4 +1,5 @@
 use stdweb::Value;
+use stdweb::unstable::TryInto;
 
 #[derive(Debug)]
 pub struct KeyPair(Value);
@@ -11,11 +12,17 @@ impl ExonumService {
         Self {  }
     }
 
-    pub fn keypair(&mut self) -> KeyPair {
-        let value = js! {
+    pub fn create_account(&mut self) {
+        js! {
             createAccount();
         };
-        KeyPair(value)
+    }
+
+    pub fn get_owner(&mut self) -> String {
+        let value = js! {
+            return keyPair.publicKey;
+        };
+        value.try_into().unwrap()
     }
 
     pub fn order_transaction(&mut self) {

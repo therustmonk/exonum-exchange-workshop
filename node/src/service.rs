@@ -22,29 +22,29 @@ use protocol::*;
 
 // // // // // // // // // // CONSTANTS // // // // // // // // // //
 
-const USD_BALANCE: u64 = 1_000_000;
-const TOKEN_BALANCE: u64 = 1_000;
+const USD_BALANCE: u32 = 1_000_000;
+const TOKEN_BALANCE: u32 = 1_000;
 
 // // // // // // // // // // PERSISTENT DATA // // // // // // // // // //
 
 encoding_struct! {
     struct Account {
         owner: &PublicKey,
-        usd_balance: u64,
-        token_balance: u64,
+        usd_balance: u32,
+        token_balance: u32,
     }
 }
 
 impl Account {
     fn buy_tokens(&self, price: u32, amount: i32) -> Self {
-        let usd_balance = self.usd_balance() - (price as i32 * amount) as u64;
-        let token_balance = self.token_balance() + amount as u64;
+        let usd_balance = self.usd_balance() - (price as i32 * amount) as u32;
+        let token_balance = self.token_balance() + amount as u32;
         Self::new(self.owner(), usd_balance, token_balance)
     }
 
     fn sell_tokens(&self, price: u32, amount: i32) -> Self {
-        let usd_balance = self.usd_balance() + (price as i32 * amount) as u64;
-        let token_balance = self.token_balance() - amount as u64;
+        let usd_balance = self.usd_balance() + (price as i32 * amount) as u32;
+        let token_balance = self.token_balance() - amount as u32;
         Self::new(self.owner(), usd_balance, token_balance)
     }
 }
