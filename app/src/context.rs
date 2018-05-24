@@ -17,9 +17,9 @@ use exonum::ExonumService;
 
 #[derive(Deserialize, Debug)]
 pub struct Account {
-    owner: String,
-    usd_balance: u64,
-    token_balance: u64,
+    pub owner: String,
+    pub usd_balance: u64,
+    pub token_balance: u64,
 }
 
 #[derive(Deserialize)]

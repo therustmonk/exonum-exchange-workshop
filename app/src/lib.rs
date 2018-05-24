@@ -27,6 +27,7 @@ use context::{Context, Account, OrderBook};
 pub struct Model {
     interval_task: IntervalTask,
     task: Option<FetchTask>,
+    account: Option<Account>,
 }
 
 pub enum Msg {
@@ -48,6 +49,7 @@ impl Component<Context> for Model {
         Model {
             interval_task,
             task: None,
+            account: None,
         }
     }
 
@@ -55,6 +57,9 @@ impl Component<Context> for Model {
         match msg {
             Msg::Account(account) => {
                 info!("Account: {:?}", account);
+                if let Ok(account) = account {
+                    self.account = Some(account);
+                }
             },
             Msg::NeedUpdate(_) => {
                 let callback = env.send_back(Msg::Account);
@@ -83,12 +88,35 @@ impl Renderable<Context, Model> for Model {
                             <table class="table",>
                             </table>
                         </div>
+                        <div class="column",>
+                            { self.view_account() }
+                        </div>
                     </div>
                     <button class="button", onclick=|_| Msg::Increment,>{ "Increment" }</button>
                     <button onclick=|_| Msg::Decrement,>{ "Decrement" }</button>
                     <button onclick=|_| Msg::Bulk(vec![Msg::Increment, Msg::Increment]),>{ "Increment Twice" }</button>
                 </div>
             </section>
+        }
+    }
+}
+
+impl Model {
+    fn view_account(&self) -> Html<Context, Self> {
+        if let Some(ref account) = self.account {
+            html! {
+                <div>
+                    <div>{ format!("OWNER: {}", account.owner) }</div>
+                    <div>{ format!("USD: {}", account.usd_balance) }</div>
+                    <div>{ format!("TOKEN: {}", account.token_balance) }</div>
+                </div>
+            }
+        } else {
+            html! {
+                <div>
+                    <div>{ "Not loaded" }</div>
+                </div>
+            }
         }
     }
 }
