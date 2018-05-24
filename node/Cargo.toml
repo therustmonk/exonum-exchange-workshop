@@ -1,6 +1,6 @@
 [package]
 name = "cryptoexchange"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Denis Kolodin <denis.kolodin@xdev.re>"]
 
 [dependencies]
@@ -8,7 +8,7 @@ log = "0.4.1"
 dotenv = "0.10.1"
 serde = "1.0"
 serde_json = "1.0"
-exonum = "0.5.1"
+exonum = "0.7.1"
 iron = "0.6.0"
 bodyparser = "0.8.0"
 router = "0.6.0"

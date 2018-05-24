@@ -43,6 +43,7 @@ fn node_config() -> NodeConfig {
         api: api_cfg,
         mempool: Default::default(),
         services_configs: Default::default(),
+        database: Default::default(),
     }
 }
 
@@ -51,7 +52,7 @@ fn main() {
     exonum::helpers::init_logger().unwrap();
     info!("Starting cryptoexchange node");
     let node = Node::new(
-        Box::new(MemoryDB::new()),
+        MemoryDB::new(),
         vec![Box::new(service::ExchangeService)],
         node_config(),
     );

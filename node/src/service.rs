@@ -1,5 +1,4 @@
-use std::io::Read;
-use exonum::blockchain::{Blockchain, Service, Transaction, ApiContext};
+use exonum::blockchain::{Blockchain, Service, Transaction, ApiContext, ExecutionResult};
 use exonum::node::{TransactionSend, ApiSender};
 use exonum::messages::{RawTransaction, Message};
 use exonum::storage::{Fork, MapIndex, Snapshot};
@@ -93,13 +92,15 @@ impl Transaction for TxCreate {
         self.verify_signature(self.owner())
     }
 
-    fn execute(&self, view: &mut Fork) {
+    fn execute(&self, view: &mut Fork) -> ExecutionResult {
+        trace!("TxOrder");
         let mut schema = ExchangeSchema::new(view);
         if schema.account(self.owner()).is_none() {
             let account = Account::new(self.owner(), USD_BALANCE, TOKEN_BALANCE);
             println!("Create the account: {:?}", account);
             schema.accounts_mut().put(self.owner(), account);
         }
+        Ok(())
     }
 }
 
@@ -108,7 +109,8 @@ impl Transaction for TxOrder {
         self.verify_signature(self.owner())
     }
 
-    fn execute(&self, view: &mut Fork) {
+    fn execute(&self, view: &mut Fork) -> ExecutionResult {
+        trace!("TxOrder");
         let mut schema = ExchangeSchema::new(view);
         let account = schema.account(self.owner());
         if let Some(account) = account {
@@ -127,6 +129,7 @@ impl Transaction for TxOrder {
                 schema.orders_mut().put(&self.id(), order);
             }
         }
+        Ok(())
     }
 }
 
@@ -152,15 +155,16 @@ impl ExchangeServiceApi {
                     "tx_hash": tx_hash
                 }))
             }
-            Ok(None) => Err(ApiError::IncorrectRequest("Empty request body".into()))?,
-            Err(e) => Err(ApiError::IncorrectRequest(Box::new(e)))?,
+            Ok(None) => Err(ApiError::BadRequest("Empty request body".into()))?,
+            Err(e) => Err(ApiError::BadRequest(e.to_string()))?,
         }
     }
 
     fn get_account(&self, req: &mut Request) -> IronResult<Response> {
         let path = req.url.path();
         let wallet_key = path.last().unwrap();
-        let public_key = PublicKey::from_hex(wallet_key).map_err(ApiError::FromHex)?;
+        let public_key = PublicKey::from_hex(wallet_key)
+            .map_err(|e| ApiError::BadRequest(e.to_string()))?;
 
         let account = {
             let snapshot = self.blockchain.snapshot();
