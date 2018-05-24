@@ -15,5 +15,9 @@ transactions! {
             amount: i32,
             id: u32,
         }
+        struct TxCancel {
+            owner: &PublicKey,
+            id: u32,
+        }
     }
 }

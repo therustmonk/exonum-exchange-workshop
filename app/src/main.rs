@@ -3,25 +3,14 @@ extern crate yew;
 extern crate trading;
 
 use yew::prelude::*;
-use trading::exonum::ExonumService;
+use yew::services::fetch::FetchService;
+use trading::context::Context;
 use trading::Model;
-
-pub struct Context {
-    exonum: ExonumService,
-}
-
-impl AsMut<ExonumService> for Context {
-    fn as_mut(&mut self) -> &mut ExonumService {
-        &mut self.exonum
-    }
-}
 
 fn main() {
     web_logger::init();
     yew::initialize();
-    let context = Context {
-        exonum: ExonumService::new(),
-    };
+    let context = Context::new();
     let app: App<_, Model> = App::new(context);
     app.mount_to_body();
     yew::run_loop();

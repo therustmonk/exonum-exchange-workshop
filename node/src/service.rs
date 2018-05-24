@@ -139,6 +139,17 @@ impl Transaction for TxOrder {
     }
 }
 
+impl Transaction for TxCancel {
+    fn verify(&self) -> bool {
+        self.verify_signature(self.owner())
+    }
+
+    fn execute(&self, view: &mut Fork) -> ExecutionResult {
+        trace!("TxCancel");
+        Ok(())
+    }
+}
+
 // // // // // // // // // // REST API // // // // // // // // // //
 
 #[derive(Clone)]
