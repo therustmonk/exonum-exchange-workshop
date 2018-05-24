@@ -1,4 +1,11 @@
-use exonum::blockchain::{Blockchain, Service, Transaction, ApiContext, ExecutionResult};
+use exonum::blockchain::{
+    Blockchain,
+    Service,
+    Transaction,
+    TransactionSet,
+    ApiContext,
+    ExecutionResult,
+};
 use exonum::node::{TransactionSend, ApiSender};
 use exonum::messages::{RawTransaction, Message};
 use exonum::storage::{Fork, MapIndex, Snapshot};
@@ -9,7 +16,6 @@ use exonum::api::{Api, ApiError};
 use iron::prelude::*;
 use iron::Handler;
 use router::Router;
-use serde::Deserialize;
 use bodyparser;
 use serde_json;
 use protocol::*;
@@ -142,13 +148,12 @@ struct ExchangeServiceApi {
 }
 
 impl ExchangeServiceApi {
-    fn post_transaction<T>(&self, req: &mut Request) -> IronResult<Response>
-    where
-        T: Transaction + Clone + for<'de> Deserialize<'de>,
-    {
-        match req.get::<bodyparser::Struct<T>>() {
+    fn post_transaction(&self, req: &mut Request) -> IronResult<Response> {
+        info!("Transaction...");
+        match req.get::<bodyparser::Struct<Transactions>>() {
             Ok(Some(transaction)) => {
-                let transaction: Box<Transaction> = Box::new(transaction);
+                info!("Ok...");
+                let transaction: Box<Transaction> = transaction.into();
                 let tx_hash = transaction.hash();
                 self.channel.send(transaction).map_err(ApiError::from)?;
                 self.ok_response(&json!({
@@ -184,10 +189,10 @@ impl Api for ExchangeServiceApi {
     fn wire(&self, router: &mut Router) {
         let self_ = self.clone();
         let post_create_account =
-            move |req: &mut Request| self_.post_transaction::<TxCreate>(req);
+            move |req: &mut Request| self_.post_transaction(req);
         let self_ = self.clone();
         let post_create_order =
-            move |req: &mut Request| self_.post_transaction::<TxOrder>(req);
+            move |req: &mut Request| self_.post_transaction(req);
         let self_ = self.clone();
         let get_account = move |req: &mut Request| self_.get_account(req);
         router.post("/v1/account", post_create_account, "post_create_account");
@@ -209,15 +214,8 @@ impl Service for ExchangeService {
     }
 
     fn tx_from_raw(&self, raw: RawTransaction) -> Result<Box<Transaction>, encoding::Error> {
-        let trans: Box<Transaction> = match raw.message_type() {
-            TX_CREATE => Box::new(TxCreate::from_raw(raw)?),
-            _ => {
-                return Err(encoding::Error::IncorrectMessageType {
-                    message_type: raw.message_type(),
-                });
-            }
-        };
-        Ok(trans)
+        let tx = Transactions::tx_from_raw(raw)?;
+        Ok(tx.into())
     }
 
     fn state_hash(&self, _: &Snapshot) -> Vec<Hash> {

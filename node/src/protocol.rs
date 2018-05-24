@@ -2,9 +2,6 @@ use exonum::crypto::PublicKey;
 
 pub const SERVICE_ID: u16 = 1;
 
-pub const TX_CREATE: u16 = 1;
-pub const TX_ORDER: u16 = 2;
-
 transactions! {
     pub Transactions {
         const SERVICE_ID = SERVICE_ID;

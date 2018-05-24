@@ -1,18 +1,33 @@
-#![recursion_limit="256"]
-extern crate rand;
-extern crate sha2;
-extern crate ed25519_dalek;
-#[macro_use]
-extern crate stdweb;
-extern crate hex;
-extern crate byteorder;
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
-extern crate serde_json;
+extern crate web_logger;
+extern crate yew;
+extern crate trading;
 
-mod client;
+use yew::prelude::*;
+use trading::exonum::ExonumService;
+use trading::Model;
 
+pub struct Context {
+    exonum: ExonumService,
+}
+
+impl AsMut<ExonumService> for Context {
+    fn as_mut(&mut self) -> &mut ExonumService {
+        &mut self.exonum
+    }
+}
+
+fn main() {
+    web_logger::init();
+    yew::initialize();
+    let context = Context {
+        exonum: ExonumService::new(),
+    };
+    let app: App<_, Model> = App::new(context);
+    app.mount_to_body();
+    yew::run_loop();
+}
+
+/*
 use std::rc::Rc;
 use stdweb::web::document;
 use stdweb::web::{XmlHttpRequest, IEventTarget, INode, IParentNode};
@@ -176,3 +191,4 @@ fn place_order(sell: bool, keypair: Rc<Keypair>) {
         });
     }
 }
+*/
