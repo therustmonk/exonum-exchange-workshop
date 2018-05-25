@@ -32,20 +32,25 @@ encoding_struct! {
         owner: &PublicKey,
         usd_balance: u32,
         token_balance: u32,
+        orders: Vec<u32>,
     }
 }
 
 impl Account {
-    fn buy_tokens(&self, price: u32, amount: i32) -> Self {
+    fn buy_tokens(&self, price: u32, amount: i32, id: u32) -> Self {
         let usd_balance = self.usd_balance() - (price as i32 * amount) as u32;
         let token_balance = self.token_balance() + amount as u32;
-        Self::new(self.owner(), usd_balance, token_balance)
+        let mut orders = self.orders();
+        orders.push(id);
+        Self::new(self.owner(), usd_balance, token_balance, orders)
     }
 
-    fn sell_tokens(&self, price: u32, amount: i32) -> Self {
+    fn sell_tokens(&self, price: u32, amount: i32, id: u32) -> Self {
         let usd_balance = self.usd_balance() + (price as i32 * amount) as u32;
         let token_balance = self.token_balance() - amount as u32;
-        Self::new(self.owner(), usd_balance, token_balance)
+        let mut orders = self.orders();
+        orders.push(id);
+        Self::new(self.owner(), usd_balance, token_balance, orders)
     }
 }
 
@@ -54,6 +59,7 @@ encoding_struct! {
         owner: &PublicKey,
         price: u32,
         amount: i32,
+        id: u32,
     }
 }
 
@@ -102,7 +108,7 @@ impl Transaction for TxCreate {
         trace!("TxOrder");
         let mut schema = ExchangeSchema::new(view);
         if schema.account(self.owner()).is_none() {
-            let account = Account::new(self.owner(), USD_BALANCE, TOKEN_BALANCE);
+            let account = Account::new(self.owner(), USD_BALANCE, TOKEN_BALANCE, Vec::new());
             println!("Create the account: {:?}", account);
             schema.accounts_mut().put(self.owner(), account);
         }
@@ -122,13 +128,13 @@ impl Transaction for TxOrder {
         if let Some(account) = account {
             let not_exists = !schema.orders_mut().contains(&self.id());
             if not_exists {
-                let order = Order::new(self.owner(), self.price(), self.amount());
-                println!("Place the order <{}>: {:?}", self.id(), order);
+                let order = Order::new(self.owner(), self.price(), self.amount(), self.id());
+                println!("Put the order <{}>: {:?}", self.id(), order);
                 let account = {
                     if order.amount() > 0 {
-                        account.buy_tokens(order.price(), order.amount())
+                        account.buy_tokens(order.price(), order.amount(), order.id())
                     } else {
-                        account.sell_tokens(order.price(), -order.amount())
+                        account.sell_tokens(order.price(), -order.amount(), order.id())
                     }
                 };
                 schema.accounts_mut().put(self.owner(), account);
