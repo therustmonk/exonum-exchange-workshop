@@ -18,14 +18,16 @@ use exonum::ExonumService;
 #[derive(Deserialize, Debug)]
 pub struct Account {
     pub owner: String,
-    pub usd_balance: u64,
-    pub token_balance: u64,
+    pub usd_balance: u32,
+    pub token_balance: u32,
+    pub orders: Vec<Order>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct Order {
-    price: u64,
-    amount: u64,
+    pub id: u32,
+    pub price: u32,
+    pub amount: u32,
 }
 
 pub type OrderBook = Vec<Order>;

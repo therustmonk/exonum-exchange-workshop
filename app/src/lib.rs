@@ -22,7 +22,7 @@ pub mod exonum;
 use yew::prelude::*;
 use yew::services::interval::IntervalTask;
 use yew::services::fetch::FetchTask;
-use context::{Context, Account, OrderBook};
+use context::{Context, Account, OrderBook, Order};
 
 pub struct Model {
     interval_task: IntervalTask,
@@ -104,11 +104,17 @@ impl Renderable<Context, Model> for Model {
 impl Model {
     fn view_account(&self) -> Html<Context, Self> {
         if let Some(ref account) = self.account {
+            let view_order = |order: &Order| html! {
+                <li>{ order.id }</id>
+            };
             html! {
                 <div>
                     <div>{ format!("OWNER: {}", account.owner) }</div>
                     <div>{ format!("USD: {}", account.usd_balance) }</div>
                     <div>{ format!("TOKEN: {}", account.token_balance) }</div>
+                    <ul>
+                        { for account.orders.iter().map(view_order) }
+                    </ul>
                 </div>
             }
         } else {

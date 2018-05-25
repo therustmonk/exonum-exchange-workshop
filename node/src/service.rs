@@ -30,8 +30,8 @@ const TOKEN_BALANCE: u32 = 1_000;
 encoding_struct! {
     struct Account {
         owner: &PublicKey,
-        usd_balance: u32,
-        token_balance: u32,
+        usd_balance: u32, // .00
+        token_balance: u32, // .000000
         orders: Vec<u32>,
     }
 }
@@ -51,6 +51,12 @@ impl Account {
         let mut orders = self.orders();
         orders.push(id);
         Self::new(self.owner(), usd_balance, token_balance, orders)
+    }
+
+    fn add_order_id(&self, id: u32) -> Self {
+        let mut orders = self.orders();
+        orders.push(id);
+        Self::new(self.owner(), self.usd_balance(), self.token_balance(), orders)
     }
 }
 
@@ -130,6 +136,10 @@ impl Transaction for TxOrder {
             if not_exists {
                 let order = Order::new(self.owner(), self.price(), self.amount(), self.id());
                 println!("Put the order <{}>: {:?}", self.id(), order);
+                let account = account.add_order_id(self.id());
+                schema.orders_mut().put(&self.id(), order);
+                schema.accounts_mut().put(self.owner(), account);
+                /*
                 let account = {
                     if order.amount() > 0 {
                         account.buy_tokens(order.price(), order.amount(), order.id())
@@ -137,8 +147,7 @@ impl Transaction for TxOrder {
                         account.sell_tokens(order.price(), -order.amount(), order.id())
                     }
                 };
-                schema.accounts_mut().put(self.owner(), account);
-                schema.orders_mut().put(&self.id(), order);
+                */
             }
         }
         Ok(())
