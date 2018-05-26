@@ -26,12 +26,15 @@ use context::{Context, Account, OrderBook, Order};
 
 pub struct Model {
     interval_task: IntervalTask,
-    task: Option<FetchTask>,
+    account_task: Option<FetchTask>,
+    orders_task: Option<FetchTask>,
     account: Option<Account>,
+    order_book: Option<OrderBook>,
 }
 
 pub enum Msg {
     Account(Result<Account, String>),
+    OrderBook(Result<OrderBook, String>),
     Increment,
     Decrement,
     Bulk(Vec<Msg>),
@@ -49,8 +52,10 @@ impl Component<Context> for Model {
         let interval_task = env.schedule_updates(callback);
         Model {
             interval_task,
-            task: None,
+            account_task: None,
+            orders_task: None,
             account: None,
+            order_book: None,
         }
     }
 
@@ -62,10 +67,19 @@ impl Component<Context> for Model {
                     self.account = Some(account);
                 }
             },
+            Msg::OrderBook(order_book) => {
+                info!("Order Book: {:?}", order_book);
+                if let Ok(order_book) = order_book {
+                    self.order_book = Some(order_book);
+                }
+            },
             Msg::NeedUpdate(_) => {
                 let callback = env.send_back(Msg::Account);
                 let task = env.fetch_account(callback);
-                self.task = Some(task);
+                self.account_task = Some(task);
+                let callback = env.send_back(Msg::OrderBook);
+                let task = env.fetch_orders(callback);
+                self.orders_task = Some(task);
             },
             Msg::PutOrder => {
                 env.exonum().put_order();
@@ -89,8 +103,7 @@ impl Renderable<Context, Model> for Model {
                                     { "Orders" }
                                 </p>
                             </nav>
-                            <table class="table",>
-                            </table>
+                            { self.view_order_book() }
                         </div>
                         <div class="column",>
                             { self.view_account() }
@@ -108,8 +121,8 @@ impl Renderable<Context, Model> for Model {
 impl Model {
     fn view_account(&self) -> Html<Context, Self> {
         if let Some(ref account) = self.account {
-            let view_order = |order: &u32| html! {
-                <li>{ order }</li>
+            let view_order_id = |id: &u32| html! {
+                <li>{ id }</li>
             };
             html! {
                 <div>
@@ -118,7 +131,7 @@ impl Model {
                     <div>{ format!("TOKEN: {}", account.token_balance) }</div>
                     <p class="title",>{ "Orders" }</p>
                     <ul>
-                        { for account.orders.iter().map(view_order) }
+                        { for account.orders.iter().map(view_order_id) }
                     </ul>
                 </div>
             }
@@ -126,6 +139,30 @@ impl Model {
             html! {
                 <div>
                     <div>{ "Not loaded" }</div>
+                </div>
+            }
+        }
+    }
+
+
+    fn view_order_book(&self) -> Html<Context, Self> {
+        if let Some(ref order_book) = self.order_book {
+            let view_order = |(_, order): (&u32, &Order)| html! {
+                <tr>
+                    <td>{ order.id }</td>
+                    <td>{ order.price }</td>
+                    <td>{ order.amount }</td>
+                </tr>
+            };
+            html! {
+                <table>
+                    { for order_book.iter().map(view_order) }
+                </table>
+            }
+        } else {
+            html! {
+                <div>
+                    <p>{ "Not loaded" }</p>
                 </div>
             }
         }

@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use exonum::blockchain::{
     Blockchain,
     Service,
@@ -209,6 +210,15 @@ impl ExchangeServiceApi {
             self.not_found_response(&serde_json::to_value("account not found").unwrap())
         }
     }
+
+    fn get_orders(&self, req: &mut Request) -> IronResult<Response> {
+        let snapshot = self.blockchain.snapshot();
+        let schema = ExchangeSchema::new(snapshot);
+        let orders = schema.orders();
+        let orders = orders.iter().collect::<BTreeMap<u32, Order>>();
+
+        self.ok_response(&serde_json::to_value(orders).unwrap())
+    }
 }
 
 impl Api for ExchangeServiceApi {
@@ -221,9 +231,12 @@ impl Api for ExchangeServiceApi {
             move |req: &mut Request| self_.post_transaction(req);
         let self_ = self.clone();
         let get_account = move |req: &mut Request| self_.get_account(req);
+        let self_ = self.clone();
+        let get_orders = move |req: &mut Request| self_.get_orders(req);
         router.post("/v1/account", post_create_account, "post_create_account");
         router.post("/v1/order", post_create_order, "post_create_order");
         router.get("/v1/account/:pub_key", get_account, "get_account");
+        router.get("/v1/orders", get_orders, "get_orders");
     }
 }
 

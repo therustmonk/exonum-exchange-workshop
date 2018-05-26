@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use failure::Error;
 use serde::Deserialize;
 use std::time::Duration;
@@ -25,12 +26,13 @@ pub struct Account {
 
 #[derive(Deserialize, Debug)]
 pub struct Order {
-    pub id: u32,
+    pub owner: String,
     pub price: u32,
     pub amount: i32,
+    pub id: u32,
 }
 
-pub type OrderBook = Vec<Order>;
+pub type OrderBook = BTreeMap<u32, Order>;
 
 pub struct Context {
     interval: IntervalService,
@@ -58,6 +60,13 @@ impl Context {
     pub fn schedule_updates(&mut self, callback: Callback<()>) -> IntervalTask {
         let duration = Duration::from_millis(300);
         self.interval.spawn(duration, callback)
+    }
+
+    pub fn fetch_orders(&mut self, callback: Callback<Result<OrderBook, String>>) -> FetchTask {
+        let url = format!(
+            "http://localhost:8080/api/services/cryptoexchange/v1/orders");
+        warn!("URL: {}", url);
+        self.fetch_resource(url, callback)
     }
 
     pub fn fetch_account(&mut self, callback: Callback<Result<Account, String>>) -> FetchTask {
