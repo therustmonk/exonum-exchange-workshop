@@ -2,7 +2,6 @@
 extern crate failure;
 #[macro_use]
 extern crate log;
-extern crate rand;
 extern crate sha2;
 extern crate ed25519_dalek;
 extern crate hex;
@@ -15,6 +14,7 @@ extern crate serde_json;
 extern crate stdweb;
 #[macro_use]
 extern crate yew;
+extern crate rand;
 
 pub mod context;
 pub mod exonum;
@@ -36,6 +36,7 @@ pub enum Msg {
     Decrement,
     Bulk(Vec<Msg>),
     NeedUpdate(()),
+    PutOrder,
 }
 
 impl Component<Context> for Model {
@@ -66,6 +67,9 @@ impl Component<Context> for Model {
                 let task = env.fetch_account(callback);
                 self.task = Some(task);
             },
+            Msg::PutOrder => {
+                env.exonum().put_order();
+            },
             _ => {
             },
         }
@@ -92,7 +96,7 @@ impl Renderable<Context, Model> for Model {
                             { self.view_account() }
                         </div>
                     </div>
-                    <button class="button", onclick=|_| Msg::Increment,>{ "Increment" }</button>
+                    <button class="button", onclick=|_| Msg::PutOrder,>{ "PutOrder" }</button>
                     <button onclick=|_| Msg::Decrement,>{ "Decrement" }</button>
                     <button onclick=|_| Msg::Bulk(vec![Msg::Increment, Msg::Increment]),>{ "Increment Twice" }</button>
                 </div>
@@ -104,14 +108,15 @@ impl Renderable<Context, Model> for Model {
 impl Model {
     fn view_account(&self) -> Html<Context, Self> {
         if let Some(ref account) = self.account {
-            let view_order = |order: &Order| html! {
-                <li>{ order.id }</id>
+            let view_order = |order: &u32| html! {
+                <li>{ order }</li>
             };
             html! {
                 <div>
                     <div>{ format!("OWNER: {}", account.owner) }</div>
                     <div>{ format!("USD: {}", account.usd_balance) }</div>
                     <div>{ format!("TOKEN: {}", account.token_balance) }</div>
+                    <p class="title",>{ "Orders" }</p>
                     <ul>
                         { for account.orders.iter().map(view_order) }
                     </ul>

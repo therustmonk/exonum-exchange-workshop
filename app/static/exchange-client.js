@@ -56,7 +56,15 @@ var createAccount = function() {
     sendTransaction(txCreate, url, data);
 };
 
-var putOrder = function() {
+var putOrder = function(price, amount, id) {
+    var url = "http://localhost:8080/api/services/cryptoexchange/v1/order";
+    var data = {
+        owner: keyPair.publicKey,
+        price: price,
+        amount: amount,
+        id: id,
+    };
+    sendTransaction(txOrder, url, data);
 };
 
 var cancelOrder = function() {

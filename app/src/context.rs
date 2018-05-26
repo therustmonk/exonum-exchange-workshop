@@ -20,14 +20,14 @@ pub struct Account {
     pub owner: String,
     pub usd_balance: u32,
     pub token_balance: u32,
-    pub orders: Vec<Order>,
+    pub orders: Vec<u32>,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct Order {
     pub id: u32,
     pub price: u32,
-    pub amount: u32,
+    pub amount: i32,
 }
 
 pub type OrderBook = Vec<Order>;
