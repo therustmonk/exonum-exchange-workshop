@@ -40,6 +40,7 @@ pub enum Msg {
     Bulk(Vec<Msg>),
     NeedUpdate(()),
     PutOrder,
+    Cancel(u32),
 }
 
 impl Component<Context> for Model {
@@ -84,6 +85,9 @@ impl Component<Context> for Model {
             Msg::PutOrder => {
                 env.exonum().put_order();
             },
+            Msg::Cancel(id) => {
+                env.exonum().cancel_order(id);
+            },
             _ => {
             },
         }
@@ -121,8 +125,11 @@ impl Renderable<Context, Model> for Model {
 impl Model {
     fn view_account(&self) -> Html<Context, Self> {
         if let Some(ref account) = self.account {
-            let view_order_id = |id: &u32| html! {
-                <li>{ id }</li>
+            let view_order_id = |id: &u32| {
+                let order_id = *id;
+                html! {
+                    <li onclick=|_| Msg::Cancel(order_id),>{ id }</li>
+                }
             };
             html! {
                 <div>

@@ -27,6 +27,13 @@ impl ExonumService {
         };
     }
 
+    pub fn cancel_order(&mut self, id: u32) {
+        js! {
+            let id = @{id};
+            cancelOrder(id);
+        };
+    }
+
     pub fn get_owner(&mut self) -> String {
         let value = js! {
             return keyPair.publicKey;

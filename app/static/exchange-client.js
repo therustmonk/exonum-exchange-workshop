@@ -22,6 +22,16 @@ var txOrder = Exonum.newMessage({
     ]
 });
 
+var txCancel = Exonum.newMessage({
+    protocol_version: 0,
+    service_id: 1,
+    message_id: 2,
+    fields: [
+        { name: 'owner', type: Exonum.PublicKey },
+        { name: 'id', type: Exonum.Uint32 },
+    ]
+});
+
 function sendTransaction(decl, url, data) {
 
     var secretKey = keyPair.secretKey;
@@ -67,5 +77,11 @@ var putOrder = function(price, amount, id) {
     sendTransaction(txOrder, url, data);
 };
 
-var cancelOrder = function() {
+var cancelOrder = function(id) {
+    var url = "http://localhost:8080/api/services/cryptoexchange/v1/cancel";
+    var data = {
+        owner: keyPair.publicKey,
+        id: id,
+    };
+    sendTransaction(txCancel, url, data);
 };

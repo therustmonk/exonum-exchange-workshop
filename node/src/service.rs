@@ -59,6 +59,17 @@ impl Account {
         orders.push(id);
         Self::new(self.owner(), self.usd_balance(), self.token_balance(), orders)
     }
+
+    fn remove_order_by_id(&self, id: u32) -> Option<Self> {
+        let mut orders = self.orders();
+        if let Some(index) = orders.iter().position(|x| *x == id) {
+            orders.remove(index);
+            let res = Self::new(self.owner(), self.usd_balance(), self.token_balance(), orders);
+            Some(res)
+        } else {
+            None
+        }
+    }
 }
 
 encoding_struct! {
@@ -162,6 +173,17 @@ impl Transaction for TxCancel {
 
     fn execute(&self, view: &mut Fork) -> ExecutionResult {
         trace!("TxCancel");
+        let mut schema = ExchangeSchema::new(view);
+        let account = schema.account(self.owner());
+        if let Some(account) = account {
+            let exists = schema.orders_mut().contains(&self.id());
+            if exists {
+                if let Some(account) = account.remove_order_by_id(self.id()) {
+                    schema.orders_mut().remove(&self.id());
+                    schema.accounts_mut().put(self.owner(), account);
+                }
+            }
+        }
         Ok(())
     }
 }
@@ -230,11 +252,15 @@ impl Api for ExchangeServiceApi {
         let post_create_order =
             move |req: &mut Request| self_.post_transaction(req);
         let self_ = self.clone();
+        let post_cancel_order =
+            move |req: &mut Request| self_.post_transaction(req);
+        let self_ = self.clone();
         let get_account = move |req: &mut Request| self_.get_account(req);
         let self_ = self.clone();
         let get_orders = move |req: &mut Request| self_.get_orders(req);
         router.post("/v1/account", post_create_account, "post_create_account");
         router.post("/v1/order", post_create_order, "post_create_order");
+        router.post("/v1/cancel", post_cancel_order, "post_cancel_order");
         router.get("/v1/account/:pub_key", get_account, "get_account");
         router.get("/v1/orders", get_orders, "get_orders");
     }
