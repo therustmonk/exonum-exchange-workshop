@@ -1,0 +1,11 @@
+[package]
+name = "app"
+version = "0.1.0"
+authors = ["Denis Kolodin <DenisKolodin@gmail.com>"]
+
+[dependencies]
+failure = "0.1"
+log = "0.4"
+web_logger = "0.1"
+stdweb = "0.4.6"
+yew = { git = "https://github.com/DenisKolodin/yew" }
