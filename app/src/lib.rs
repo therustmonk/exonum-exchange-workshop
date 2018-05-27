@@ -113,9 +113,6 @@ impl Renderable<Context, Model> for Model {
                             { self.view_account() }
                         </div>
                     </div>
-                    <button class="button", onclick=|_| Msg::PutOrder,>{ "PutOrder" }</button>
-                    <button onclick=|_| Msg::Decrement,>{ "Decrement" }</button>
-                    <button onclick=|_| Msg::Bulk(vec![Msg::Increment, Msg::Increment]),>{ "Increment Twice" }</button>
                 </div>
             </section>
         }
@@ -133,13 +130,43 @@ impl Model {
             };
             html! {
                 <div>
-                    <div>{ format!("OWNER: {}", account.owner) }</div>
-                    <div>{ format!("USD: {}", account.usd_balance) }</div>
-                    <div>{ format!("TOKEN: {}", account.token_balance) }</div>
-                    <p class="title",>{ "Orders" }</p>
-                    <ul>
-                        { for account.orders.iter().map(view_order_id) }
-                    </ul>
+                    <div class="section",>
+                        <div class="box",>
+                            <div>{ format!("OWNER: {}", account.owner) }</div>
+                            <div>{ format!("USD: {}", account.usd_balance) }</div>
+                            <div>{ format!("TOKEN: {}", account.token_balance) }</div>
+                        </div>
+                    </div>
+                    <div class="section",>
+                        <div class="box",>
+                            <div class="field",>
+                                <label class="label",>{ "Price" }</label>
+                                <div class="control",>
+                                <input class="input", type="text", placeholder="Price", />
+                                </div>
+                            </div>
+                            <div class="field",>
+                                <label class="label",>{ "Amount" }</label>
+                                <div class="control",>
+                                <input class="input", type="text", placeholder="Amount", />
+                                </div>
+                            </div>
+                            <div class=("field", "has-addons"),>
+                                <p class="control",>
+                                    <button class="button", onclick=|_| Msg::PutOrder,>{ "Buy" }</button>
+                                </p>
+                                <p class="control",>
+                                    <button class="button", onclick=|_| Msg::PutOrder,>{ "Sell" }</button>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="section",>
+                        <p class="title",>{ "Orders" }</p>
+                        <ul>
+                            { for account.orders.iter().map(view_order_id) }
+                        </ul>
+                    </div>
                 </div>
             }
         } else {
@@ -154,16 +181,38 @@ impl Model {
 
     fn view_order_book(&self) -> Html<Context, Self> {
         if let Some(ref order_book) = self.order_book {
+            let view_side = |buy: bool| {
+                if buy {
+                    html! {
+                        <span class=("button", "is-small", "is-success"),>{ "Buy" }</span>
+                    }
+                } else {
+                    html! {
+                        <span class=("button", "is-small", "is-danger"),>{ "Sell" }</span>
+                    }
+                }
+            };
             let view_order = |(_, order): (&u32, &Order)| html! {
                 <tr>
                     <td>{ order.id }</td>
                     <td>{ order.price }</td>
-                    <td>{ order.amount }</td>
+                    <td>{ order.amount.abs() }</td>
+                    <td>{ view_side(order.amount > 0) }</td>
                 </tr>
             };
             html! {
-                <table>
-                    { for order_book.iter().map(view_order) }
+                <table class=("table", "is-fullwidth"),>
+                    <thead>
+                        <tr>
+                            <th>{ "#ID" }</th>
+                            <th>{ "Price" }</th>
+                            <th>{ "Amount" }</th>
+                            <th>{ "Side" }</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        { for order_book.iter().map(view_order) }
+                    </tbody>
                 </table>
             }
         } else {
