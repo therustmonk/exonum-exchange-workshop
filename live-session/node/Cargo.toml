@@ -1,0 +1,9 @@
+[package]
+name = "node"
+version = "0.1.0"
+authors = ["Denis Kolodin <DenisKolodin@gmail.com>"]
+
+[dependencies]
+log = "0.4"
+dotenv = "0.10"
+exonum = "0.7"
