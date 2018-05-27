@@ -61,6 +61,7 @@ impl Renderable<Context, Model> for Model {
                             <div class="control",>
                                 <input class=("input", price_class),
                                        type="text",
+                                       value=&self.price_text,
                                        placeholder="What price is it?",
                                        oninput=|event| Msg::UpdatePriceText(event.value),
                                        />
@@ -76,13 +77,14 @@ impl Renderable<Context, Model> for Model {
                     </div>
                 </div>
                 <div class="section",>
-                    <table class="table",>
+                    <table class=("table", "is-fullwidth"),>
                         <thead>
                             <tr>
                                 <th>{ "Price" }</th>
                             </tr>
                         </thead>
                         <tbody>
+                            { for self.orders.iter().map(view_order) }
                         </tbody>
                     </table>
                 </div>
@@ -91,3 +93,10 @@ impl Renderable<Context, Model> for Model {
     }
 }
 
+fn view_order(order: &String) -> Html<Context, Model> {
+    html! {
+        <tr>
+            <td>{ order }</td>
+        </tr>
+    }
+}
